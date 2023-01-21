@@ -2,6 +2,8 @@
 #include <sys/types.h>
 #include <winsock2.h>
 
+#include "http.h"
+
 void configureSocket(SOCKET* sock);
 void configureAddr(SOCKADDR_IN* sin);
 void runServer(SOCKET* sock, SOCKADDR* sin, unsigned long long sizeof_sin);
@@ -37,7 +39,7 @@ void configureAddr(SOCKADDR_IN* sin){
 }
 
 void runServer(SOCKET* sock, SOCKADDR* sin, unsigned long long sizeof_sin){
-  char buff[256];
+  HTTP_Request* request = Http_Request_new();
 
   listen(*sock, 0);
   printf("Server listening...\n");
@@ -46,13 +48,17 @@ void runServer(SOCKET* sock, SOCKADDR* sin, unsigned long long sizeof_sin){
     SOCKET val = accept(*sock, sin, &sizeof_csin);
     if(val != INVALID_SOCKET)
     {
-      int data_len = recv(val, buff, 256, MSG_PEEK);
-      while(data_len >= 0){
-        printf("Receive data: %d \n", data_len);
-        printf("%s", buff);
-      }
+      parseHTTPRequest(&val, request);
+      printf("Complete data: %d \n", request->buffer_size);
+      printf("%s\n", request->buffer);
+
+      
+      setHeaders(request);
     
       closesocket(val);
+      freeHTTPRequest(request);
     }
   }
+
+  free(request);
 }
