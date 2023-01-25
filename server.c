@@ -1,6 +1,5 @@
 #include "server.h"
 
-
 void configureServer(SERVER* server, char* addr, u_short port){
   server->sock = socket(AF_INET,SOCK_STREAM,0);
   if (server->sock == INVALID_SOCKET) {
@@ -32,7 +31,46 @@ void listenningConnection(SERVER* server){
       printf("%.*s\n", (int)request->buffer_size, request->buffer);
     
       HTTP_Response* response = Http_Response_new();
-      response->status_code = 200;
+
+      if(request->info.type == GET){
+        
+        int filePathLength = snprintf(NULL, 0, "www/%.*s", request->info.path_size, request->info.path);
+        if(filePathLength > 0) {
+          char* filePath = (char*) malloc(filePathLength*sizeof(char));
+          sprintf(filePath, "www/%.*s", request->info.path_size, request->info.path); 
+
+          FILE *f = fopen(filePath, "rb");
+
+          if (f == NULL) {
+            printf("Ressouces not found!\n");
+            response->status_code = 404;
+          } else{
+            fseek(f, 0, SEEK_END);
+            long fsize = ftell(f);
+            fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
+
+            response->buffer_size = fsize + 1;
+            response->buffer = malloc(response->buffer_size*sizeof(char));
+            fread(response->buffer, fsize, 1, f);
+
+            setHeader(response, "Content-Type", "text/html; charset=UTF-8");
+            
+            int contentLengthSize = snprintf(NULL, 0, "%d", response->buffer_size);
+            if(contentLengthSize > 0) {
+              char* str = (char*) malloc(contentLengthSize*sizeof(char));
+              sprintf(str, "%d", response->buffer_size); 
+              setHeader(response, "Content-Length", str);
+              response->status_code = 200;
+            }
+
+            fclose(f);
+            printf("close file!\n");
+          }
+        }
+        
+      }else{
+        response->status_code = 200;
+      }
       setHeader(response, "Server", "cserver/0.0.1");
       setHeader(response, "Connection", "close");
 

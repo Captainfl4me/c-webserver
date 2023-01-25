@@ -1,6 +1,6 @@
 #include "http.h"
 
-#define BUFFER_LENGTH 512
+#define BUFFER_LENGTH 2048
 
 HTTP_Request* Http_Request_new(void){
   HTTP_Request proto;
@@ -29,8 +29,19 @@ char* writeResponse(HTTP_Response* response, size_t* buffer_size) {
     buff = (char*) malloc(first_line_size*sizeof(char));
     buff_size = first_line_size;
     memcpy(buff, firstLine, strlen(firstLine));
+  }else if(response->status_code == 404){
+    char firstLine[] = "HTTP/1.1 404 Not Found\n";
+    size_t first_line_size = strlen(firstLine);
+    buff = (char*) malloc(first_line_size*sizeof(char));
+    buff_size = first_line_size;
+    memcpy(buff, firstLine, strlen(firstLine));
+  }else{    
+    char firstLine[] = "HTTP/1.1 500 Internal Error\n";
+    size_t first_line_size = strlen(firstLine);
+    buff = (char*) malloc(first_line_size*sizeof(char));
+    buff_size = first_line_size;
+    memcpy(buff, firstLine, strlen(firstLine));
   }
-  printf("%.*s", (int)buff_size, buff);
 
   for(int i = 0; i < response->headers_size; i++) {
     size_t new_line_size = 0;
@@ -43,6 +54,12 @@ char* writeResponse(HTTP_Response* response, size_t* buffer_size) {
   }
   buff = (char*) realloc(buff, (buff_size+1)*sizeof(char));
   buff[buff_size++] = '\n';
+
+  if(response->buffer_size > 0) {
+    buff = (char*) realloc(buff, (buff_size+response->buffer_size)*sizeof(char));
+    memcpy(buff + buff_size, response->buffer, response->buffer_size);
+    buff_size += response->buffer_size;
+  }
 
   *buffer_size = buff_size;
   return buff;
@@ -124,9 +141,8 @@ void parseInfo(int infoLength, char* infoString, HTTP_Info* info){
       break;
     buff[path_size++] = infoString[i];
   }
+  info->path = filterUrlPath(buff, &path_size);
   info->path_size = path_size;
-  info->path = (char*) malloc(info->path_size*sizeof(char));
-  memcpy(info->path, buff, path_size);
 }
 
 void setHeader(HTTP_Response* request, char* key, char* value) {

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "header.h"
+#include "path_url.h"
 
 enum HTTP_Type { NONE, GET };
 
@@ -31,7 +32,7 @@ typedef struct HTTP_Response {
     int headers_size;
     HTTP_Header* headers;
 
-    int buffer_size;
+    long buffer_size;
     char *buffer;
 } HTTP_Response;
 
