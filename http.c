@@ -3,13 +3,59 @@
 #define BUFFER_LENGTH 512
 
 HTTP_Request* Http_Request_new(void){
-    HTTP_Request proto;
-    proto.buffer_size = 0;
-    proto.headers_size = 0;
+  HTTP_Request proto;
+  proto.buffer_size = 0;
+  proto.headers_size = 0;
 
-    HTTP_Request* d = malloc(sizeof(HTTP_Request));
-    *d = proto;
-    return d;
+  HTTP_Request* d = malloc(sizeof(HTTP_Request));
+  *d = proto;
+  return d;
+}
+
+HTTP_Response* Http_Response_new(void){
+  HTTP_Response* d = malloc(sizeof(HTTP_Request));
+  d->buffer_size = 0;
+  d->headers_size = 0;
+  return d;
+}
+
+char* writeResponse(HTTP_Response* response, size_t* buffer_size) {
+  char* buff;
+  size_t buff_size = 0;
+
+  if(response->status_code == 200){
+    char firstLine[] = "HTTP/1.1 200 OK\n";
+    size_t first_line_size = strlen(firstLine);
+    buff = (char*) malloc(first_line_size*sizeof(char));
+    buff_size = first_line_size;
+    memcpy(buff, firstLine, strlen(firstLine));
+  }
+  printf("%.*s", (int)buff_size, buff);
+
+  for(int i = 0; i < response->headers_size; i++) {
+    size_t new_line_size = 0;
+    char* header_line = writeHeader(response->headers[i], &new_line_size);
+    
+    buff = (char*) realloc(buff, (buff_size + new_line_size + 1)*sizeof(char));
+    memcpy(buff + buff_size, header_line, new_line_size);
+    buff_size += new_line_size + 1;
+    buff[buff_size-1] = '\n';
+  }
+  buff = (char*) realloc(buff, (buff_size+1)*sizeof(char));
+  buff[buff_size++] = '\n';
+
+  *buffer_size = buff_size;
+  return buff;
+}
+
+char* writeHeader(HTTP_Header header, size_t* buffer_size) {
+  *buffer_size = header.key_size+header.value_size+2;
+  char* header_string = (char*) malloc((*buffer_size)*sizeof(char));
+
+  memcpy(header_string, header.key, header.key_size);
+  memcpy(header_string + header.key_size, ": ", 2);
+  memcpy(header_string + header.key_size + 2, header.value, header.value_size);
+  return header_string;
 }
 
 //Return buffer size
@@ -100,28 +146,57 @@ void parseHeader(int headerLength, char* headerString, HTTP_Header* header){
       break;
   }
   header->key_size = separatorIndex;
-  header->key = (char*) malloc(header->key_size * sizeof(char));
+  header->key = (char*) malloc((header->key_size+1) * sizeof(char));
+  header->key[header->key_size] = '\0';
   memcpy(header->key, headerString, separatorIndex);
   
   header->value_size = headerLength-(header->key_size+2);
-  header->value = (char*) malloc(header->value_size * sizeof(char));
+  header->value = (char*) malloc((header->value_size+1) * sizeof(char));
+  header->key[header->value_size] = '\0';
   memcpy(header->value, headerString+header->key_size+2, header->value_size);
   
   //printf("key: %.*s\n", header->key_size, header->key);  
   //printf("value: %.*s\n", header->value_size, header->value);
 }
 
-void setHeaders(HTTP_Request* request) {
-  for(int i = 0; i < request->buffer_size; i++) {
-    printf("%c", request->buffer[i]);
-    if(request->buffer[i] == '\n')
-      break;
+HTTP_Header* createHeader(char* key, char* value){
+  HTTP_Header* d = malloc(sizeof(HTTP_Request));
+  d->key_size = strlen(key);
+  d->key = key;
+  d->value_size = strlen(value);
+  d->value = value;
+
+  return d;
+}
+
+void setHeaders(HTTP_Response* request, HTTP_Header header) {
+  int indexOfHeader = -1;
+  //Check if header already exist
+  for(int i = 0; i < request->headers_size; i++) {
+    if(strcmp(request->headers[i].key, header.value) == 0){
+      request->headers[i] = header;
+      indexOfHeader = i;
+      return;
+    }
   }
+  //If not realloc
+  request->headers_size++;
+  if(request->headers_size <= 1){
+    request->headers = (HTTP_Header*) malloc(sizeof(HTTP_Header));
+  }else{
+    request->headers = (HTTP_Header*) realloc(request->headers, request->headers_size*sizeof(HTTP_Header));
+  }
+  request->headers[request->headers_size-1] = header;
 }
 
 void freeHTTPRequest(HTTP_Request* request) {
-    if(request->buffer)
-        free(request->buffer);
+  if(request->buffer_size > 0)
+      free(request->buffer);
 
-    request->buffer_size = 0;
+  request->buffer_size = 0;
+}
+void freeHTTPResponse(HTTP_Response* response) {
+  if(response->headers_size > 0)
+    free(response->headers);
+  response->headers_size = 0;
 }

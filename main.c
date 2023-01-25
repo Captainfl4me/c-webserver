@@ -49,11 +49,24 @@ void runServer(SOCKET* sock, SOCKADDR* sin, unsigned long long sizeof_sin){
     if(val != INVALID_SOCKET)
     {
       parseHTTPRequest(&val, request);
-      printf("Complete data: %d \n", request->buffer_size);
-      printf("%.*s\n", request->buffer_size, request->buffer);
+      printf("Complete data: %d \n", (int)request->buffer_size);
+      printf("%.*s\n", (int)request->buffer_size, request->buffer);
     
+      HTTP_Response* response = Http_Response_new();
+      response->status_code = 200;
+      setHeaders(response, *createHeader("Server", "cserver/0.0.1"));
+      setHeaders(response, *createHeader("Connection", "close"));
+
+      size_t response_size;
+      char* responseBuffer = writeResponse(response, &response_size);
+
+      printf("Response data: %d \n", (int)response_size);
+      printf("%.*s\n", (int)response_size, responseBuffer);
+
+      send(val, responseBuffer, (int)response_size, 0);
       closesocket(val);
       freeHTTPRequest(request);
+      freeHTTPResponse(response);
     }
   }
 
