@@ -54,8 +54,8 @@ void runServer(SOCKET* sock, SOCKADDR* sin, unsigned long long sizeof_sin){
     
       HTTP_Response* response = Http_Response_new();
       response->status_code = 200;
-      setHeaders(response, *createHeader("Server", "cserver/0.0.1"));
-      setHeaders(response, *createHeader("Connection", "close"));
+      setHeader(response, "Server", "cserver/0.0.1");
+      setHeader(response, "Connection", "close");
 
       size_t response_size;
       char* responseBuffer = writeResponse(response, &response_size);
@@ -65,6 +65,7 @@ void runServer(SOCKET* sock, SOCKADDR* sin, unsigned long long sizeof_sin){
 
       send(val, responseBuffer, (int)response_size, 0);
       closesocket(val);
+      
       freeHTTPRequest(request);
       freeHTTPResponse(response);
     }

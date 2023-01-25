@@ -48,16 +48,6 @@ char* writeResponse(HTTP_Response* response, size_t* buffer_size) {
   return buff;
 }
 
-char* writeHeader(HTTP_Header header, size_t* buffer_size) {
-  *buffer_size = header.key_size+header.value_size+2;
-  char* header_string = (char*) malloc((*buffer_size)*sizeof(char));
-
-  memcpy(header_string, header.key, header.key_size);
-  memcpy(header_string + header.key_size, ": ", 2);
-  memcpy(header_string + header.key_size + 2, header.value, header.value_size);
-  return header_string;
-}
-
 //Return buffer size
 void parseHTTPRequest(SOCKET* sock, HTTP_Request* request){
   char buff[BUFFER_LENGTH];
@@ -139,37 +129,9 @@ void parseInfo(int infoLength, char* infoString, HTTP_Info* info){
   memcpy(info->path, buff, path_size);
 }
 
-void parseHeader(int headerLength, char* headerString, HTTP_Header* header){
-  int separatorIndex;
-  for(separatorIndex = 0; separatorIndex < headerLength; separatorIndex++) {
-    if(headerString[separatorIndex] == ':')
-      break;
-  }
-  header->key_size = separatorIndex;
-  header->key = (char*) malloc((header->key_size+1) * sizeof(char));
-  header->key[header->key_size] = '\0';
-  memcpy(header->key, headerString, separatorIndex);
-  
-  header->value_size = headerLength-(header->key_size+2);
-  header->value = (char*) malloc((header->value_size+1) * sizeof(char));
-  header->key[header->value_size] = '\0';
-  memcpy(header->value, headerString+header->key_size+2, header->value_size);
-  
-  //printf("key: %.*s\n", header->key_size, header->key);  
-  //printf("value: %.*s\n", header->value_size, header->value);
-}
+void setHeader(HTTP_Response* request, char* key, char* value) {
+  HTTP_Header header = *createHeader(key, value);
 
-HTTP_Header* createHeader(char* key, char* value){
-  HTTP_Header* d = malloc(sizeof(HTTP_Request));
-  d->key_size = strlen(key);
-  d->key = key;
-  d->value_size = strlen(value);
-  d->value = value;
-
-  return d;
-}
-
-void setHeaders(HTTP_Response* request, HTTP_Header header) {
   int indexOfHeader = -1;
   //Check if header already exist
   for(int i = 0; i < request->headers_size; i++) {
