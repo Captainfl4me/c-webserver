@@ -50,10 +50,7 @@ void runServer(SOCKET* sock, SOCKADDR* sin, unsigned long long sizeof_sin){
     {
       parseHTTPRequest(&val, request);
       printf("Complete data: %d \n", request->buffer_size);
-      printf("%s\n", request->buffer);
-
-      
-      setHeaders(request);
+      printf("%.*s\n", request->buffer_size, request->buffer);
     
       closesocket(val);
       freeHTTPRequest(request);
