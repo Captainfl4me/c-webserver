@@ -5,7 +5,10 @@
 HTTP_Request* Http_Request_new(void){
   HTTP_Request proto;
   proto.buffer_size = 0;
+  proto.buffer = NULL;
+
   proto.headers_size = 0;
+  proto.headers = NULL;
 
   HTTP_Request* d = malloc(sizeof(HTTP_Request));
   *d = proto;
@@ -15,7 +18,10 @@ HTTP_Request* Http_Request_new(void){
 HTTP_Response* Http_Response_new(void){
   HTTP_Response* d = malloc(sizeof(HTTP_Request));
   d->buffer_size = 0;
+  d->buffer = NULL;
+
   d->headers_size = 0;
+  d->headers = NULL;
   return d;
 }
 
@@ -141,8 +147,10 @@ void parseInfo(int infoLength, char* infoString, HTTP_Info* info){
       break;
     buff[path_size++] = infoString[i];
   }
-  info->path = filterUrlPath(buff, &path_size);
+
   info->path_size = path_size;
+  info->path = (char*) malloc(path_size * sizeof(char));
+  memcpy(info->path, buff, path_size);
 }
 
 void setHeader(HTTP_Response* request, char* key, char* value) {

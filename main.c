@@ -4,6 +4,8 @@
 
 #include "server.h"
 
+void indexPage(HTTP_Request *req, HTTP_Response *res);
+
 int main()
 {
   WSADATA WSAData;
@@ -12,6 +14,9 @@ int main()
   SERVER server;
   configureServer(&server, "127.0.0.1", 4148);
 
+  URL_PATH *url_path = parseUrlPathToStruct("/index", 6);
+  createEndpoint(&server, url_path, GET, indexPage);
+
   listenningConnection(&server);
 
   freeServer(&server);
@@ -19,3 +24,17 @@ int main()
   return 0;
 }
 
+void indexPage(HTTP_Request *req, HTTP_Response *res)
+{
+  setHeader(res, "Content-Type", "text/html; charset=UTF-8");
+  
+  res->buffer_size = snprintf(NULL, 0, "Hello world!")+1;
+  if (res->buffer_size > 0)
+  {
+    if (res->buffer != NULL)
+      free(res->buffer);
+
+    res->buffer = (char *)malloc(res->buffer_size * sizeof(char));
+    sprintf_s(res->buffer, res->buffer_size, "Hello world!");
+  }
+}

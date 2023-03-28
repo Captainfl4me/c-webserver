@@ -6,8 +6,8 @@ void configureServer(SERVER* server, char* addr, u_short port){
       wprintf(L"socket failed with error: %ld\n", WSAGetLastError());
       exit(EXIT_FAILURE);
   }
-  
-  server->sin.sin_addr.s_addr = inet_addr(addr);
+
+  inet_pton(AF_INET, addr, &(server->sin.sin_addr.s_addr));
   server->sin.sin_family = AF_INET;
   server->sin.sin_port = htons(port);
 
@@ -15,6 +15,9 @@ void configureServer(SERVER* server, char* addr, u_short port){
     wprintf(L"bind failed with error: %ld\n", WSAGetLastError());
     exit(EXIT_FAILURE);
   }
+
+  server->endpointsLength = 0;
+  server->endpoints = NULL;
 }
 
 void listenningConnection(SERVER* server){
@@ -32,14 +35,24 @@ void listenningConnection(SERVER* server){
     
       HTTP_Response* response = Http_Response_new();
 
+      int index_endpointToExecute = resolveUrlPath(server, request->info.path, (int)request->info.path_size);
+      if(index_endpointToExecute >= 0){
+        response->status_code = 200;
+        server->endpoints[index_endpointToExecute].callback(request, response);
+      }else{
+        response->status_code = 404;
+      }
+
+/*
       if(request->info.type == GET){
         
-        int filePathLength = snprintf(NULL, 0, "www/%.*s", request->info.path_size, request->info.path);
+        int filePathLength = snprintf(NULL, 0, "www/%.*s", (int)request->info.path_size, request->info.path);
         if(filePathLength > 0) {
           char* filePath = (char*) malloc(filePathLength*sizeof(char));
-          sprintf(filePath, "www/%.*s", request->info.path_size, request->info.path); 
+          sprintf_s(filePath, filePathLength, "www/%.*s", (int)request->info.path_size, request->info.path); 
 
-          FILE *f = fopen(filePath, "rb");
+          FILE *f;
+          errno_t err = fopen_s(&f, filePath, "rb");
 
           if (f == NULL) {
             printf("Ressouces not found!\n");
@@ -47,7 +60,7 @@ void listenningConnection(SERVER* server){
           } else{
             fseek(f, 0, SEEK_END);
             long fsize = ftell(f);
-            fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
+            fseek(f, 0, SEEK_SET);  // same as rewind(f); 
 
             response->buffer_size = fsize + 1;
             response->buffer = malloc(response->buffer_size*sizeof(char));
@@ -58,7 +71,7 @@ void listenningConnection(SERVER* server){
             int contentLengthSize = snprintf(NULL, 0, "%d", response->buffer_size);
             if(contentLengthSize > 0) {
               char* str = (char*) malloc(contentLengthSize*sizeof(char));
-              sprintf(str, "%d", response->buffer_size); 
+              sprintf_s(str, contentLengthSize, "%d", response->buffer_size); 
               setHeader(response, "Content-Length", str);
               response->status_code = 200;
             }
@@ -71,6 +84,7 @@ void listenningConnection(SERVER* server){
       }else{
         response->status_code = 200;
       }
+*/
       setHeader(response, "Server", "cserver/0.0.1");
       setHeader(response, "Connection", "close");
 
@@ -85,10 +99,44 @@ void listenningConnection(SERVER* server){
       
       freeHTTPRequest(request);
       freeHTTPResponse(response);
+      free(response);
     }
   }
 
   free(request);
+}
+
+unsigned int resolveUrlPath(SERVER* server, char* full_path, int path_len){
+  URL_PATH* requested_path = parseUrlPathToStruct(full_path, path_len);
+  
+  unsigned int full_path_len = 0;
+  char *full_path_str = printUrlPath(requested_path, &full_path_len);
+  printf("New request: %.*s\n", (int)full_path_len, full_path_str);
+  
+  unsigned int i;
+  for(i = 0; i < server->endpointsLength; i++) {
+    if(urlPathCmp(&server->endpoints[i], requested_path) == true) break;
+  }
+  if(i >= server->endpointsLength) i = -1;
+
+  free(requested_path);
+  return i;
+}
+
+void createEndpoint(SERVER* server, URL_PATH* path, enum HTTP_Type http_Type, void (*callback)(HTTP_Request*, HTTP_Response*)) {
+  if(server->endpointsLength == 0)
+    server->endpoints = (URL_PATH*) malloc((++server->endpointsLength) * sizeof(URL_PATH));
+  else
+    server->endpoints = (URL_PATH*) realloc(server->endpoints, (++server->endpointsLength) * sizeof(URL_PATH));
+
+  path->callback = callback;
+  server->endpoints[server->endpointsLength - 1] = *path;
+
+  unsigned int full_path_len = 0;
+  char *full_path = printUrlPath(path, &full_path_len);
+  printf("Creating new endpoint: %.*s\n", (int)full_path_len, full_path);
+
+  free(full_path);
 }
 
 void freeServer(SERVER* server) {
