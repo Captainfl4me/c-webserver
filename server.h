@@ -17,8 +17,10 @@ typedef struct SERVER {
 
 unsigned int resolveUrlPath(SERVER* server, char* full_path, int path_len);
 void configureServer(SERVER* server, char* addr, u_short port);
-void createEndpoint(SERVER* server, URL_PATH* path, enum HTTP_Type http_Type, void (*callback)(HTTP_Request*, HTTP_Response*));
 void listenningConnection(SERVER* server);
 void freeServer(SERVER* server);
+
+void createEndpoint(SERVER* server, URL_PATH* path, enum HTTP_Type http_Type, void (*callback)(HTTP_Request*, HTTP_Response*));
+void createRedirection(SERVER* server, URL_PATH* path, char* path_dst);
 
 #endif

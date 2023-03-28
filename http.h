@@ -10,7 +10,7 @@
 #include "header.h"
 #include "path_url.h"
 
-enum HTTP_Type { NONE, GET };
+enum HTTP_Type { NONE, GET, POST };
 
 typedef struct HTTP_Info {
     enum HTTP_Type type;

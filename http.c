@@ -41,6 +41,13 @@ char* writeResponse(HTTP_Response* response, size_t* buffer_size) {
     buff = (char*) malloc(first_line_size*sizeof(char));
     buff_size = first_line_size;
     memcpy(buff, firstLine, strlen(firstLine));
+    
+  }else if(response->status_code == 302){
+    char firstLine[] = "HTTP/1.1 302 Redirect\n";
+    size_t first_line_size = strlen(firstLine);
+    buff = (char*) malloc(first_line_size*sizeof(char));
+    buff_size = first_line_size;
+    memcpy(buff, firstLine, strlen(firstLine));
   }else{    
     char firstLine[] = "HTTP/1.1 500 Internal Error\n";
     size_t first_line_size = strlen(firstLine);

@@ -3,6 +3,7 @@
 URL_PATH* parseUrlPathToStruct(char* path, int pathLen) {
   URL_PATH* url_path = (URL_PATH*) malloc(sizeof(URL_PATH));
   url_path->segment_number = 0;
+  url_path->type = NOACTION;
 
   int last_dash_index = 0;
   int i;

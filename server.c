@@ -37,8 +37,21 @@ void listenningConnection(SERVER* server){
 
       int index_endpointToExecute = resolveUrlPath(server, request->info.path, (int)request->info.path_size);
       if(index_endpointToExecute >= 0){
-        response->status_code = 200;
-        server->endpoints[index_endpointToExecute].callback(request, response);
+        switch (server->endpoints[index_endpointToExecute].type)
+        {
+        case ENDPOINT:
+          server->endpoints[index_endpointToExecute].callback(request, response);
+          response->status_code = 200;
+          break;
+          
+        case REDIRECTION:
+          setHeader(response, "location", server->endpoints[index_endpointToExecute].redirect_link);
+          response->status_code = 302;
+          break;
+        
+        default:
+          break;
+        }
       }else{
         response->status_code = 404;
       }
@@ -129,6 +142,7 @@ void createEndpoint(SERVER* server, URL_PATH* path, enum HTTP_Type http_Type, vo
   else
     server->endpoints = (URL_PATH*) realloc(server->endpoints, (++server->endpointsLength) * sizeof(URL_PATH));
 
+  path->type = ENDPOINT;
   path->callback = callback;
   server->endpoints[server->endpointsLength - 1] = *path;
 
@@ -137,6 +151,26 @@ void createEndpoint(SERVER* server, URL_PATH* path, enum HTTP_Type http_Type, vo
   printf("Creating new endpoint: %.*s\n", (int)full_path_len, full_path);
 
   free(full_path);
+}
+
+void createRedirection(SERVER* server, URL_PATH* path, char* path_dst) {
+  if(server->endpointsLength == 0)
+    server->endpoints = (URL_PATH*) malloc((++server->endpointsLength) * sizeof(URL_PATH));
+  else
+    server->endpoints = (URL_PATH*) realloc(server->endpoints, (++server->endpointsLength) * sizeof(URL_PATH));
+
+  path->type = REDIRECTION;
+  path->callback = NULL;
+  size_t link_len = strlen(path_dst)+1;
+  path->redirect_link = (char*) malloc(link_len);
+  strcpy_s(path->redirect_link, link_len, path_dst);
+  server->endpoints[server->endpointsLength - 1] = *path;
+
+  unsigned int src_full_path_len = 0;
+  char *src_full_path = printUrlPath(path, &src_full_path_len);
+  printf("Creating new redirection: %.*s -> %s\n", (int)src_full_path_len, src_full_path, path_dst);
+
+  free(src_full_path);
 }
 
 void freeServer(SERVER* server) {

@@ -16,6 +16,9 @@ int main()
 
   URL_PATH *url_path = parseUrlPathToStruct("/index", 6);
   createEndpoint(&server, url_path, GET, indexPage);
+  
+  URL_PATH *url_path_redirect = parseUrlPathToStruct("/", 1);
+  createRedirection(&server, url_path_redirect, "/index");
 
   listenningConnection(&server);
 
@@ -27,7 +30,7 @@ int main()
 void indexPage(HTTP_Request *req, HTTP_Response *res)
 {
   setHeader(res, "Content-Type", "text/html; charset=UTF-8");
-  
+
   res->buffer_size = snprintf(NULL, 0, "Hello world!")+1;
   if (res->buffer_size > 0)
   {
