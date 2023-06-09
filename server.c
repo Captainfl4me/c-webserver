@@ -48,7 +48,42 @@ void listenningConnection(SERVER* server){
           setHeader(response, "location", server->endpoints[index_endpointToExecute].redirect_link);
           response->status_code = 302;
           break;
-        
+        case STATIC:
+          int filePathLength = snprintf(NULL, 0, "www/%.*s", (int)request->info.path_size, request->info.path);
+          if(filePathLength > 0) {
+            char* filePath = (char*) malloc(filePathLength*sizeof(char));
+            sprintf_s(filePath, filePathLength, "www/%.*s", (int)request->info.path_size, request->info.path); 
+
+            FILE *f;
+            errno_t err = fopen_s(&f, filePath, "rb");
+
+            if (f == NULL) {
+              printf("Ressouces not found!\n");
+              response->status_code = 404;
+            } else{
+              fseek(f, 0, SEEK_END);
+              long fsize = ftell(f);
+              fseek(f, 0, SEEK_SET);  // same as rewind(f); 
+
+              response->buffer_size = fsize + 1;
+              response->buffer = malloc(response->buffer_size*sizeof(char));
+              fread(response->buffer, fsize, 1, f);
+
+              setHeader(response, "Content-Type", "text/html; charset=UTF-8");
+              
+              int contentLengthSize = snprintf(NULL, 0, "%d", response->buffer_size);
+              if(contentLengthSize > 0) {
+                char* str = (char*) malloc(contentLengthSize*sizeof(char));
+                sprintf_s(str, contentLengthSize, "%d", response->buffer_size); 
+                setHeader(response, "Content-Length", str);
+                response->status_code = 200;
+              }
+
+              fclose(f);
+              printf("close file!\n");
+            }
+          }
+          break;
         default:
           break;
         }
@@ -59,40 +94,7 @@ void listenningConnection(SERVER* server){
 /*
       if(request->info.type == GET){
         
-        int filePathLength = snprintf(NULL, 0, "www/%.*s", (int)request->info.path_size, request->info.path);
-        if(filePathLength > 0) {
-          char* filePath = (char*) malloc(filePathLength*sizeof(char));
-          sprintf_s(filePath, filePathLength, "www/%.*s", (int)request->info.path_size, request->info.path); 
-
-          FILE *f;
-          errno_t err = fopen_s(&f, filePath, "rb");
-
-          if (f == NULL) {
-            printf("Ressouces not found!\n");
-            response->status_code = 404;
-          } else{
-            fseek(f, 0, SEEK_END);
-            long fsize = ftell(f);
-            fseek(f, 0, SEEK_SET);  // same as rewind(f); 
-
-            response->buffer_size = fsize + 1;
-            response->buffer = malloc(response->buffer_size*sizeof(char));
-            fread(response->buffer, fsize, 1, f);
-
-            setHeader(response, "Content-Type", "text/html; charset=UTF-8");
-            
-            int contentLengthSize = snprintf(NULL, 0, "%d", response->buffer_size);
-            if(contentLengthSize > 0) {
-              char* str = (char*) malloc(contentLengthSize*sizeof(char));
-              sprintf_s(str, contentLengthSize, "%d", response->buffer_size); 
-              setHeader(response, "Content-Length", str);
-              response->status_code = 200;
-            }
-
-            fclose(f);
-            printf("close file!\n");
-          }
-        }
+        
         
       }else{
         response->status_code = 200;
@@ -169,6 +171,26 @@ void createRedirection(SERVER* server, URL_PATH* path, char* path_dst) {
   unsigned int src_full_path_len = 0;
   char *src_full_path = printUrlPath(path, &src_full_path_len);
   printf("Creating new redirection: %.*s -> %s\n", (int)src_full_path_len, src_full_path, path_dst);
+
+  free(src_full_path);
+}
+
+void createStaticEndpoint(SERVER* server, URL_PATH* path, char* path_dst) {
+  if(server->endpointsLength == 0)
+    server->endpoints = (URL_PATH*) malloc((++server->endpointsLength) * sizeof(URL_PATH));
+  else
+    server->endpoints = (URL_PATH*) realloc(server->endpoints, (++server->endpointsLength) * sizeof(URL_PATH));
+
+  path->type = STATIC;
+  path->callback = NULL;
+  size_t link_len = strlen(path_dst)+1;
+  path->redirect_link = (char*) malloc(link_len);
+  strcpy_s(path->redirect_link, link_len, path_dst);
+  server->endpoints[server->endpointsLength - 1] = *path;
+
+  unsigned int src_full_path_len = 0;
+  char *src_full_path = printUrlPath(path, &src_full_path_len);
+  printf("Creating new static: %.*s -> %s\n", (int)src_full_path_len, src_full_path, path_dst);
 
   free(src_full_path);
 }

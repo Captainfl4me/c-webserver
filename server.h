@@ -22,5 +22,6 @@ void freeServer(SERVER* server);
 
 void createEndpoint(SERVER* server, URL_PATH* path, enum HTTP_Type http_Type, void (*callback)(HTTP_Request*, HTTP_Response*));
 void createRedirection(SERVER* server, URL_PATH* path, char* path_dst);
+void createStaticEndpoint(SERVER* server, URL_PATH* path, char* path_dst);
 
 #endif

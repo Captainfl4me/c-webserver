@@ -9,7 +9,7 @@
 typedef struct HTTP_Response HTTP_Response;
 typedef struct HTTP_Request HTTP_Request;
 
-enum URL_Type { NOACTION, ENDPOINT, REDIRECTION };
+enum URL_Type { NOACTION, ENDPOINT, REDIRECTION, STATIC };
 
 typedef struct URL_SEGMENT {
   unsigned int segment_length;
